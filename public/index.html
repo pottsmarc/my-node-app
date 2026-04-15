@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <h1>Socket.IO Test: HOW DO I USE THIS?</h1>
+    <button id="myButton">Click me</button>
+
+    <iframe src = "https://script.google.com/macros/s/AKfycbxfLDnUE70vtI6w3h732g6A94IIDGYVt9sbAMr1X789GjNUeLPOEzASF-MYN9taYRU4ww/exec">    </iframe>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+
+      socket.on("connect", () => {
+        console.log("✅ Connected:", socket.id);
+      });
+
+      document.getElementById("myButton").addEventListener("click", () => {
+        console.log("🖱️ Button clicked");
+        socket.emit("action", { msg: "hello" });
+      });
+
+      socket.on("action", (data) => {
+        console.log("📩 Received:", data);
+      });
+    </script>
+  </body>
+</html>
