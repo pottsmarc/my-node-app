@@ -36,72 +36,114 @@ io.on("connection", (socket) => {
   });
 
   /////////////////////new line of code/////////////////////////////////
-    socket.on("get_class_roster", async (data) => {
 
-    try {
+socket.on("get_class_roster", async (data) => {
 
-      const classId = data.classId;
+  console.log("================================");
+  console.log("ROSTER REQUEST RECEIVED");
+  console.log("Socket:", socket.id);
+  console.log("Requested class:", data?.classId);
 
-      const url = new URL(process.env.APPS_SCRIPT_URL);
+  try {
 
-      url.searchParams.set(
-        "key",
-        process.env.APPS_SCRIPT_KEY
-      );
+    const classId = String(data?.classId || "").trim();
 
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error("Roster request failed.");
-      }
-
-      const roster = await response.json();
-
-      if (roster.error) {
-        throw new Error(roster.error);
-      }
-
-      const students = roster.students
-
-        .filter(student =>
-          student.ClassID === classId
-        )
-
-        .map(student => ({
-
-          markerId: Number(student.MarkerID),
-
-          MarkerID: Number(student.MarkerID),
-
-          StudentName: student.StudentName
-
-        }));
-
-      socket.emit("class_roster", {
-
-        classId: classId,
-
-        students: students
-
-      });
-
-      console.log(
-        "Roster sent:",
-        classId,
-        students.length
-      );
-
-    } catch (error) {
-
-      console.error("Roster error:", error);
-
-      socket.emit("roster_error", {
-        message: "Unable to load classroom roster."
-      });
-
+    if (!classId) {
+      throw new Error("Missing classId.");
     }
 
-  });
+    // Check environment variables.
+    if (!process.env.APPS_SCRIPT_URL) {
+      throw new Error("APPS_SCRIPT_URL is missing.");
+    }
+
+    if (!process.env.APPS_SCRIPT_KEY) {
+      throw new Error("APPS_SCRIPT_KEY is missing.");
+    }
+
+    console.log("Apps Script URL found.");
+
+    // Construct Apps Script request.
+    const url = new URL(process.env.APPS_SCRIPT_URL);
+
+    url.searchParams.set(
+      "key",
+      process.env.APPS_SCRIPT_KEY
+    );
+
+    console.log("Requesting Google Apps Script...");
+
+    const response = await fetch(url);
+
+    console.log("Apps Script HTTP status:", response.status);
+
+    if (!response.ok) {
+      throw new Error(
+        "Apps Script HTTP error: " + response.status
+      );
+    }
+
+    const roster = await response.json();
+
+    console.log("Apps Script response received.");
+
+    if (roster.error) {
+      throw new Error(roster.error);
+    }
+
+    if (!Array.isArray(roster.students)) {
+      throw new Error(
+        "Expected roster.students to be an array."
+      );
+    }
+
+    console.log(
+      "Total students returned by Apps Script:",
+      roster.students.length
+    );
+
+    // Filter students by classroom.
+    const students = roster.students
+
+      .filter(student =>
+        String(student.ClassID || "").trim() === classId
+      )
+
+      .map(student => ({
+        markerId: Number(student.MarkerID),
+        MarkerID: Number(student.MarkerID),
+        StudentName: student.StudentName
+      }));
+
+    console.log(
+      "Students matching class:",
+      students.length
+    );
+
+    // Send roster to requesting scanner.
+    socket.emit("class_roster", {
+      classId: classId,
+      students: students
+    });
+
+    console.log(
+      "SUCCESS: Roster sent to socket:",
+      socket.id
+    );
+
+    console.log("================================");
+
+  } catch (error) {
+
+    console.error("ROSTER ERROR:", error);
+
+    socket.emit("roster_error", {
+      message: error.message
+    });
+
+  }
+
+});///////////////end of new line of code
 });
 
 app.get("/", (req, res) => {
