@@ -83,7 +83,39 @@ socket.on("get_class_roster", async (data) => {
       );
     }
 
-    const roster = await response.json();
+    // const roster = await response.json();
+    
+const contentType = response.headers.get("content-type");
+
+console.log("HTTP STATUS:", response.status);
+console.log("CONTENT TYPE:", contentType);
+
+// Do not log the query string because it contains your API key.
+console.log(
+  "FINAL RESPONSE URL:",
+  response.url.split("?")[0]
+);
+
+const responseText = await response.text();
+
+console.log(
+  "RAW GOOGLE RESPONSE:",
+  responseText.substring(0, 1500)
+);
+
+let roster;
+
+try {
+  roster = JSON.parse(responseText);
+} catch (error) {
+  throw new Error(
+    "Google returned HTML or invalid JSON. " +
+    "Content-Type: " + contentType +
+    ". Response begins: " +
+    responseText.substring(0, 300)
+  );
+}
+//////////////////////////end of test///////////////////////////////////////
 
     console.log("Apps Script response received.");
 
