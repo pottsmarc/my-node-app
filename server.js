@@ -176,6 +176,80 @@ try {
   }
 
 });///////////////end of new line of code
+
+
+  /////////////////////////////////////////////////////new line of code for questions//////////////////////////////////////
+  // Receive question request from ArUco scanner.
+socket.on("get_questions", async (data) => {
+
+  try {
+
+    console.log("Question request received:", data);
+
+    const Skill = data.skill;
+    const Amount = data.amount;
+
+    if (!Skill || !Amount) {
+      throw new Error("Missing skill or question amount.");
+    }
+
+    const url = new URL(process.env.APPS_SCRIPT_URL);
+
+    url.searchParams.set(
+      "key",
+      process.env.APPS_SCRIPT_KEY
+    );
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "get_questions",
+        skill: Skill,
+        amount: Amount
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("Apps Script request failed.");
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || "Question retrieval failed.");
+    }
+
+    console.log("Questions successfully retrieved.");
+
+    // Send questions to the requesting scanner.
+    socket.emit("questions_received", {
+      skill: Skill,
+      values: result.values
+    });
+
+    // Send question data to connected Plickers displays.
+io.emit("plickers_questions_received", {
+  skill: Skill,
+  amount: Amount,
+  values: result.values
+});
+
+console.log("Questions sent to ArUco and Plickers.");
+
+  } catch (error) {
+
+    console.error("QUESTION ERROR:", error);
+
+    socket.emit("questions_error", {
+      message: error.message
+    });
+
+  }
+
+});//////////////////////end of new line of code for aruco scanner
 });
 
 app.get("/", (req, res) => {
